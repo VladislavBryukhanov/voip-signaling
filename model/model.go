@@ -14,20 +14,25 @@ type RTCSessionDescriptionInit struct {
 }
 
 type IceCandidate struct {
+	ID uint `gorm:"primaryKey; uniqueIndex"`
+	ConnectionID uint
+
 	Candidate string `json:"candidate"`
 	SdpMLineIndex int `json:"sdpMLineIndex"`
 	SdpMid int `json:"sdpMid"`
 }
 
+// TODO set uniques
 type WebRTCConnection struct {
-	ID uint `gorm:"primaryKey"`
+	ID uint `gorm:"primaryKey; uniqueIndex"`
 	CreatedAt time.Time
 
-	InitiatorId int
-	ExpirationDate int 
-	Offer RTCSessionDescriptionInit `gorm:"embedded"`
-	Answer RTCSessionDescriptionInit `gorm:"embedded"`
-	// Candidates []IceCandidate `gorm:"embedded" json:"cadidates"`
+	InitiatorId int `json:"initiator_id"`
+	ExpirationDate int `json:"expiration_date"`
+	Offer RTCSessionDescriptionInit `gorm:"embedded" json:"offer"`
+	Answer RTCSessionDescriptionInit `gorm:"embedded" json:"answer"`
+	// TODO cascade delete  __  constraint:OnDelete:CASCADE
+	Candidates []IceCandidate `gorm:"foreignKey:ConnectionID" json:"candidates"`
 }
 
 var DB *gorm.DB
@@ -41,7 +46,7 @@ func InitDb() {
 }
 
 func Migrate() {
-	DB.AutoMigrate(&WebRTCConnection{})
+	DB.AutoMigrate(&WebRTCConnection{}, &IceCandidate{})
 }
 
 func CreateWebRTCConnection(con *WebRTCConnection) {
@@ -52,7 +57,7 @@ func CreateWebRTCConnection(con *WebRTCConnection) {
 func GetActiveConnections() []WebRTCConnection {
 	var peerCons []WebRTCConnection
 
-	res := DB.Find(&peerCons)
+	res := DB.Preload("Candidates").Find(&peerCons)
 	utils.ErrorHandler(res.Error)
 
 	return peerCons
