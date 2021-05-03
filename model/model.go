@@ -1,9 +1,11 @@
 package model
 
 import (
-	"log"
 	"time"
+	"github.com/spf13/viper"
 	"gorm.io/gorm"
+	"gorm.io/driver/postgres"
+	"github.com/VladislavBryukhanov/voip-signaling/utils"
 )
 
 type RTCSessionDescriptionInit struct {
@@ -21,38 +23,37 @@ type WebRTCConnection struct {
 	ID uint `gorm:"primaryKey"`
 	CreatedAt time.Time
 
-	InitiatorId int `json:"initiator_id"`
-	ExpirationDate int `json:"expiration_date"`
-	Offer RTCSessionDescriptionInit `gorm:"embedded" json:"offer"`
-	Answer RTCSessionDescriptionInit `gorm:"embedded" json:"answer"`
+	InitiatorId int
+	ExpirationDate int 
+	Offer RTCSessionDescriptionInit `gorm:"embedded"`
+	Answer RTCSessionDescriptionInit `gorm:"embedded"`
 	// Candidates []IceCandidate `gorm:"embedded" json:"cadidates"`
 }
 
 var DB *gorm.DB
 
-func SetDatabase(db *gorm.DB, sync bool) {
-	DB = db
+func InitDb() {
+	dsn := viper.Get("DSN").(string)
 
-	if sync {
-		db.AutoMigrate(&WebRTCConnection{})
-	}
+	db, err := gorm.Open(postgres.Open(dsn))
+	utils.ErrorHandler(err)
+	DB = db
+}
+
+func Migrate() {
+	DB.AutoMigrate(&WebRTCConnection{})
 }
 
 func CreateWebRTCConnection(con *WebRTCConnection) {
 	res := DB.Create(con)
-
-	if res.Error != nil {
-		log.Fatal(res.Error)
-	}
+	utils.ErrorHandler(res.Error)
 }
 
 func GetActiveConnections() []WebRTCConnection {
 	var peerCons []WebRTCConnection
-	res := DB.Find(&peerCons)
 
-	if res.Error != nil {
-		log.Fatal(res.Error)
-	}
+	res := DB.Find(&peerCons)
+	utils.ErrorHandler(res.Error)
 
 	return peerCons
 }

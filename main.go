@@ -1,34 +1,31 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"github.com/VladislavBryukhanov/voip-signaling/connectionmanager"
 	"github.com/VladislavBryukhanov/voip-signaling/model"
+	"github.com/VladislavBryukhanov/voip-signaling/utils"
 	"github.com/gorilla/mux"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"github.com/spf13/viper"
 )
 
-const DSN = "host=localhost user=SECRET password=SECRET dbname=voip_signaling port=5432"
+func initEnv() {
+	viper.SetConfigFile(".env")
 
-func initDb() {
-	db, err := gorm.Open(postgres.Open(DSN))
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	model.SetDatabase(db, true)
+	err := viper.ReadInConfig();
+	utils.ErrorHandler(err)
 }
 
+
 func main() {
-	initDb();
-	
+	initEnv()
+	model.InitDb()
+	model.Migrate()
+
 	router := mux.NewRouter()
-	router.HandleFunc("/mock-connection", connectionmanager.GetMockConnections).Methods("GET")
 	router.HandleFunc("/active-connection", connectionmanager.GetActiveConnections).Methods("GET")
 	router.HandleFunc("/save-connection", connectionmanager.UpsertConnection).Methods("PUT")
 
 	http.Handle("/", router)
-	log.Fatal(http.ListenAndServe(":3131", nil))
+	utils.ErrorHandler(http.ListenAndServe(":3131", nil))
 }
