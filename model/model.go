@@ -8,29 +8,30 @@ import (
 	"github.com/VladislavBryukhanov/voip-signaling/utils"
 )
 
-type RTCSessionDescriptionInit struct {
+type RTCSessionDescription struct {
+	ID uint `gorm:"primaryKey; uniqueIndex" json:"-"`
+	ConnectionID uint `gorm:"uniqueIndex:idx_type_con_id" json:"-"`
+
 	Sdp string `json:"sdp"`
-	Type string `json:"type"` 
+	Type string `gorm:"type:session_description_type; uniqueIndex:idx_type_con_id" json:"type"`
 }
 
 type IceCandidate struct {
-	ID uint `gorm:"primaryKey; uniqueIndex"`
-	ConnectionID uint
+	ID uint `gorm:"primaryKey; uniqueIndex" json:"-"`
+	ConnectionID uint `json:"-"`
 
 	Candidate string `json:"candidate"`
 	SdpMLineIndex int `json:"sdpMLineIndex"`
 	SdpMid int `json:"sdpMid"`
 }
 
-// TODO set uniques
 type WebRTCConnection struct {
 	ID uint `gorm:"primaryKey; uniqueIndex"`
-	CreatedAt time.Time
+	CreatedAt time.Time `json:"-"`
 
 	InitiatorId int `json:"initiator_id"`
 	ExpirationDate int `json:"expiration_date"`
-	Offer RTCSessionDescriptionInit `gorm:"embedded" json:"offer"`
-	Answer RTCSessionDescriptionInit `gorm:"embedded" json:"answer"`
+	SessionDescriptions []RTCSessionDescription `gorm:"foreignKey:ConnectionID; constraint:OnDelete:CASCADE" json:"session_descriptions"`
 	Candidates []IceCandidate `gorm:"foreignKey:ConnectionID; constraint:OnDelete:CASCADE;" json:"candidates"`
 }
 
@@ -45,14 +46,20 @@ func InitDb() {
 }
 
 func Migrate() {
-	DB.AutoMigrate(&WebRTCConnection{}, &IceCandidate{})
+	DB.Exec(`
+		DO $$ BEGIN
+			CREATE TYPE session_description_type AS ENUM('offer', 'answer');
+		EXCEPTION
+			WHEN duplicate_object THEN null;
+		END $$;
+	`)
+	DB.AutoMigrate(&WebRTCConnection{}, &IceCandidate{}, &RTCSessionDescription{})
 }
-
 
 func GetActiveConnections() ([]WebRTCConnection, error) {
 	var peerCons []WebRTCConnection
 
-	res := DB.Preload("Candidates").Find(&peerCons)
+	res := DB.Preload("Candidates").Preload("SessionDescriptions").Find(&peerCons)
 	return peerCons, res.Error
 }
 
@@ -63,6 +70,11 @@ func CreateWebRTCConnection(con *WebRTCConnection) error {
 
 func AttachIceCandidate(ice *IceCandidate) error {
 	res := DB.Create(ice)
+	return res.Error
+}
+
+func AttachSessionDescription(session *RTCSessionDescription) error {
+	res := DB.Create(session)
 	return res.Error
 }
 

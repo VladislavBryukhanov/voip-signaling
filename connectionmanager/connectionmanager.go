@@ -19,6 +19,12 @@ func httpErrorHandler(err error, w http.ResponseWriter) {
 	}
 }
 
+func getConnectionId(r *http.Request) (uint, error) {
+	idParam := mux.Vars(r)["connection_id"]
+	connId, err := strconv.ParseUint(idParam, 10, 64)
+	return uint(connId), err
+}
+
 func GetActiveConnections(w http.ResponseWriter, r *http.Request) {
 	res, err := model.GetActiveConnections()
 	httpErrorHandler(err, w)
@@ -34,31 +40,44 @@ func UpsertConnection(w http.ResponseWriter, r *http.Request) {
 	httpErrorHandler(err, w)
 
 	// TODO upsert
-	model.CreateWebRTCConnection(&conection)
+	err = model.CreateWebRTCConnection(&conection)
+	httpErrorHandler(err, w)
 }
 
 func AttachIceCandidate(w http.ResponseWriter, r *http.Request) {
-	idParam := mux.Vars(r)["connection_id"]
 	var ice model.IceCandidate
 
-	connId, err := strconv.ParseUint(idParam, 10, 64)
+	connectionId, err := getConnectionId(r)
 	httpErrorHandler(err, w)
 
 	err = json.NewDecoder(r.Body).Decode(&ice)
 	httpErrorHandler(err, w)
 
-	ice.ConnectionID = uint(connId)
+	ice.ConnectionID = connectionId
 
 	err = model.AttachIceCandidate(&ice)
 	httpErrorHandler(err, w)
 }
 
-func DisposeConnection(w http.ResponseWriter, r *http.Request) {
-	idParam := mux.Vars(r)["connection_id"]
+func AttachSessionDescription(w http.ResponseWriter, r *http.Request) {
+	var description model.RTCSessionDescription
 
-	connectionId, err := strconv.ParseUint(idParam, 10, 64)
+	connectionId, err := getConnectionId(r)
 	httpErrorHandler(err, w)
 
-	err = model.DeleteConnection(uint(connectionId))
+	err = json.NewDecoder(r.Body).Decode(&description)
+	httpErrorHandler(err, w)
+
+	description.ConnectionID = connectionId
+
+	err = model.AttachSessionDescription(&description)
+	httpErrorHandler(err, w)
+}
+
+func DisposeConnection(w http.ResponseWriter, r *http.Request) {
+	connectionId, err := getConnectionId(r)
+	httpErrorHandler(err, w)
+
+	err = model.DeleteConnection(connectionId)
 	httpErrorHandler(err, w)
 }

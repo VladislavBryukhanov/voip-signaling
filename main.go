@@ -23,10 +23,12 @@ func main() {
 
 	router := mux.NewRouter()
 	// TODO how async works
-	router.HandleFunc("/active-connection", connectionmanager.GetActiveConnections).Methods("GET")
-	router.HandleFunc("/save-connection", connectionmanager.UpsertConnection).Methods("PUT")
-	router.HandleFunc("/add-ice-candidate/{connection_id}", connectionmanager.AttachIceCandidate).Methods("POST")
-	router.HandleFunc("/dispose-connection/{connection_id}", connectionmanager.DisposeConnection).Methods("DELETE")
+
+	router.HandleFunc("/connection", connectionmanager.GetActiveConnections).Methods("GET")
+	router.HandleFunc("/connection", connectionmanager.UpsertConnection).Methods("PUT")
+	router.HandleFunc("/connection/{connection_id}", connectionmanager.DisposeConnection).Methods("DELETE")
+	router.HandleFunc("/connection/{connection_id}/session-description", connectionmanager.AttachSessionDescription).Methods("PUT")
+	router.HandleFunc("/connection/{connection_id}/ice-candidate", connectionmanager.AttachIceCandidate).Methods("POST")
 
 	http.Handle("/", router)
 	utils.ErrorHandler(http.ListenAndServe(":3131", nil))
