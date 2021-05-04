@@ -36,10 +36,14 @@ func GetActiveConnections(w http.ResponseWriter, r *http.Request) {
 func UpsertConnection(w http.ResponseWriter, r *http.Request) {
 	var conection model.WebRTCConnection
 
-	err := json.NewDecoder(r.Body).Decode(&conection)
+	connectionId, err := getConnectionId(r)
 	httpErrorHandler(err, w)
 
-	// TODO upsert
+	err = json.NewDecoder(r.Body).Decode(&conection)
+	httpErrorHandler(err, w)
+
+	conection.ID = connectionId
+
 	err = model.CreateWebRTCConnection(&conection)
 	httpErrorHandler(err, w)
 }

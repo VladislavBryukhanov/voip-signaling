@@ -2,10 +2,12 @@ package model
 
 import (
 	"time"
-	"github.com/spf13/viper"
-	"gorm.io/gorm"
-	"gorm.io/driver/postgres"
+
 	"github.com/VladislavBryukhanov/voip-signaling/utils"
+	"github.com/spf13/viper"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type RTCSessionDescription struct {
@@ -64,7 +66,9 @@ func GetActiveConnections() ([]WebRTCConnection, error) {
 }
 
 func CreateWebRTCConnection(con *WebRTCConnection) error {
-	res := DB.Create(con)
+	res := DB.Clauses(clause.OnConflict{
+		UpdateAll: true,
+	}).Create(con)
 	return res.Error
 }
 
