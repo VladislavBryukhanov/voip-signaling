@@ -31,8 +31,7 @@ type WebRTCConnection struct {
 	ExpirationDate int `json:"expiration_date"`
 	Offer RTCSessionDescriptionInit `gorm:"embedded" json:"offer"`
 	Answer RTCSessionDescriptionInit `gorm:"embedded" json:"answer"`
-	// TODO cascade delete  __  constraint:OnDelete:CASCADE
-	Candidates []IceCandidate `gorm:"foreignKey:ConnectionID" json:"candidates"`
+	Candidates []IceCandidate `gorm:"foreignKey:ConnectionID; constraint:OnDelete:CASCADE;" json:"candidates"`
 }
 
 var DB *gorm.DB
@@ -49,16 +48,25 @@ func Migrate() {
 	DB.AutoMigrate(&WebRTCConnection{}, &IceCandidate{})
 }
 
-func CreateWebRTCConnection(con *WebRTCConnection) {
-	res := DB.Create(con)
-	utils.ErrorHandler(res.Error)
-}
 
-func GetActiveConnections() []WebRTCConnection {
+func GetActiveConnections() ([]WebRTCConnection, error) {
 	var peerCons []WebRTCConnection
 
 	res := DB.Preload("Candidates").Find(&peerCons)
-	utils.ErrorHandler(res.Error)
+	return peerCons, res.Error
+}
 
-	return peerCons
+func CreateWebRTCConnection(con *WebRTCConnection) error {
+	res := DB.Create(con)
+	return res.Error
+}
+
+func AttachIceCandidate(ice *IceCandidate) error {
+	res := DB.Create(ice)
+	return res.Error
+}
+
+func DeleteConnection(connectionId uint) error {
+	res := DB.Delete(&WebRTCConnection{}, connectionId)
+	return res.Error
 }

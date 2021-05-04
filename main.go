@@ -25,6 +25,8 @@ func main() {
 	// TODO how async works
 	router.HandleFunc("/active-connection", connectionmanager.GetActiveConnections).Methods("GET")
 	router.HandleFunc("/save-connection", connectionmanager.UpsertConnection).Methods("PUT")
+	router.HandleFunc("/add-ice-candidate/{connection_id}", connectionmanager.AttachIceCandidate).Methods("POST")
+	router.HandleFunc("/dispose-connection/{connection_id}", connectionmanager.DisposeConnection).Methods("DELETE")
 
 	http.Handle("/", router)
 	utils.ErrorHandler(http.ListenAndServe(":3131", nil))
