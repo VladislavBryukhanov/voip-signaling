@@ -65,6 +65,13 @@ func GetActiveConnections() ([]WebRTCConnection, error) {
 	return peerCons, res.Error
 }
 
+func GetConnection(connectionId uint) (WebRTCConnection, error) {
+	var peerConnection WebRTCConnection
+
+	res := DB.First(&peerConnection, connectionId)
+	return peerConnection, res.Error
+}
+
 func CreateWebRTCConnection(con *WebRTCConnection) error {
 	res := DB.Clauses(clause.OnConflict{
 		UpdateAll: true,

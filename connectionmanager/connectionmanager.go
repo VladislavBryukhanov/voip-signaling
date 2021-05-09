@@ -29,8 +29,19 @@ func GetActiveConnections(w http.ResponseWriter, r *http.Request) {
 	res, err := model.GetActiveConnections()
 	httpErrorHandler(err, w)
 
-	w.Header().Set("Content-type", "application/json")
 	json.NewEncoder(w).Encode(res)
+}
+
+func GetConnection(w http.ResponseWriter, r *http.Request) {
+	var peerConnection model.WebRTCConnection
+
+	connectionId, err := getConnectionId(r)
+	httpErrorHandler(err, w)
+
+	peerConnection, err = model.GetConnection(connectionId)
+	httpErrorHandler(err, w)
+	
+	json.NewEncoder(w).Encode(peerConnection)
 }
 
 func UpsertConnection(w http.ResponseWriter, r *http.Request) {

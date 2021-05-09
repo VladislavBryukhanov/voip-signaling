@@ -16,19 +16,29 @@ func initEnv() {
 	utils.ErrorHandler(err)
 }
 
+func httpHeaderMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-type", "application/json")
+		next.ServeHTTP(w, r)
+	});
+}
+
 func main() {
 	initEnv()
 	model.InitDb()
 	model.Migrate()
 
-	router := mux.NewRouter()
+	router := mux.NewRouter().PathPrefix("/connection").Subrouter()
 	// TODO how async works
 
-	router.HandleFunc("/connection", connectionmanager.GetActiveConnections).Methods("GET")
-	router.HandleFunc("/connection/{connection_id}", connectionmanager.UpsertConnection).Methods("PUT")
-	router.HandleFunc("/connection/{connection_id}", connectionmanager.DisposeConnection).Methods("DELETE")
-	router.HandleFunc("/connection/{connection_id}/session-description", connectionmanager.AttachSessionDescription).Methods("PUT")
-	router.HandleFunc("/connection/{connection_id}/ice-candidate", connectionmanager.AttachIceCandidate).Methods("POST")
+	router.Use(httpHeaderMiddleware);
+
+	router.HandleFunc("", connectionmanager.GetActiveConnections).Methods("GET")
+	router.HandleFunc("/{connection_id}", connectionmanager.GetConnection).Methods("GET")
+	router.HandleFunc("/{connection_id}", connectionmanager.UpsertConnection).Methods("PUT")
+	router.HandleFunc("/{connection_id}", connectionmanager.DisposeConnection).Methods("DELETE")
+	router.HandleFunc("/{connection_id}/session-description", connectionmanager.AttachSessionDescription).Methods("PUT")
+	router.HandleFunc("/{connection_id}/ice-candidate", connectionmanager.AttachIceCandidate).Methods("POST")
 
 	http.Handle("/", router)
 	utils.ErrorHandler(http.ListenAndServe(":3131", nil))
